@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Wanofii Frontend</title>
+</head>
+<body>
+  <h1>Wanofii Economy</h1>
+  
+  <!-- Login Form -->
+  <div id="login">
+    <h2>Login</h2>
+    <input type="text" id="phone" placeholder="Phone" value="1000">
+    <input type="password" id="password" placeholder="Password" value="admin123">
+    <button onclick="login()">Login</button>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard" style="display:none;">
+    <h2>Welcome!</h2>
+    <p>Balance: ₵<span id="balance">0</span></p>
+    <button onclick="logout()">Logout</button>
+    
+    <h3>Buy Ticket</h3>
+    <select id="gameType">
+      <option>Pick3</option>
+      <option>Pick4</option>
+      <option>Pick5</option>
+    </select>
+    <input type="text" id="numbers" placeholder="Numbers">
+    <select id="price">
+      <option>5</option>
+      <option>10</option>
+      <option>20</option>
+    </select>
+    <button onclick="buyTicket()">Buy</button>
+    
+    <h3>My Tickets</h3>
+    <div id="tickets"></div>
+  </div>
+
+  <script>
+    // Your Web App URL from Apps Script
+    const API_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
+    
+    let currentUser = null;
+    
+    async function callAPI(action, params = {}) {
+      const url = new URL(API_URL);
+      url.searchParams.set('action', action);
+      Object.keys(params).forEach(key => url.searchParams.set(key, params[key]));
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (!data.success) throw new Error(data.error);
+      return data.data;
+    }
+    
+    async function login() {
+      try {
+        const phone = document.getElementById('phone').value;
+        const password = document.getElementById('password').value;
+        
+        currentUser = await callAPI('login', { phone, password });
+        document.getElementById('balance').textContent = currentUser.balance;
+        
+        document.getElementById('login').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        
+        loadTickets();
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    }
+    
+    async function buyTicket() {
+      try {
+        const gameType = document.getElementById('gameType').value;
+        const numbers = document.getElementById('numbers').value;
+        const price = document.getElementById('price').value;
+        
+        const result = await callAPI('buyTicket', {
+          phone: currentUser.phone,
+          gameType: gameType,
+          numbers: numbers,
+          price: price
+        });
+        
+        alert('Ticket bought! ID: ' + result.ticketID);
+        document.getElementById('balance').textContent = result.newBalance;
+        loadTickets();
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    }
+    
+    async function loadTickets() {
+      try {
+        const data = await callAPI('getTickets', { phone: currentUser.phone });
+        const container = document.getElementById('tickets');
+        container.innerHTML = '';
+        data.tickets.forEach(ticket => {
+          container.innerHTML += `
+            <div>${ticket.gameType} ${ticket.numbers} - ₵${ticket.price}</div>
+          `;
+        });
+      } catch (error) {
+        console.error('Load tickets error:', error);
+      }
+    }
+    
+    function logout() {
+      currentUser = null;
+      document.getElementById('login').style.display = 'block';
+      document.getElementById('dashboard').style.display = 'none';
+    }
+  </script>
+</body>
+</html></html>
